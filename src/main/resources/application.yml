@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: kafka-queues-poc
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  kafka:
+    topic: poc-queue-topic
+    share-group-id: poc-share-group
+    produce-on-startup: 400
+    consumer:
+      concurrency: 4
+      slow-probability: 0.01
+      slow-sleep-ms: 45000
+      fast-sleep-ms: 0
+      share-lock-duration-ms: 120000
