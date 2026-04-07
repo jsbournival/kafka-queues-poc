@@ -40,10 +40,11 @@ public class StartupBurstProducer implements ApplicationRunner {
       log.info("Waiting {} ms before publishing so share consumers can join", produceDelayMs);
       Thread.sleep(produceDelayMs);
     }
-    log.info("Publishing {} records to {}", produceOnStartup, topic);
+    int poisonIndex = (int) (Math.random() * produceOnStartup);
+    log.info("Publishing {} records to {} (POISON at index {})", produceOnStartup, topic, poisonIndex);
     for (int i = 0; i < produceOnStartup; i++) {
       String key = Integer.toString(i);
-      String value = "msg-" + i;
+      String value = i == poisonIndex ? "POISON" : "msg-" + i;
       kafkaTemplate.send(topic, key, value).get();
     }
     log.info("Finished publishing {} records", produceOnStartup);

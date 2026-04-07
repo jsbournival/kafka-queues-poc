@@ -16,4 +16,5 @@ app:
     consumer:
       slow-sleep-ms: 500
       fast-sleep-ms: 0
-      share-lock-duration-ms: 120000
+      poison-sleep-ms: 5000
+      max-delivery-attempts: 5

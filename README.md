@@ -39,9 +39,13 @@ Both listeners use a `ShareKafkaListenerContainerFactory` backed by a `DefaultSh
 
 On startup, `StartupBurstProducer` waits 8 seconds (to let both consumers connect) then publishes 400 messages to the topic.
 
+### Poison message
+
+Among the 400 messages, one is given the value `POISON` at a random index. Any consumer that receives it intentionally sleeps **past the broker's lock duration** (`group.share.record.lock.duration.ms`, set to 3 s in `docker-compose.yml`), so the broker reclaims and redelivers it. The broker's `group.share.record.max.delivery.attempts` (default: 5) controls how many times it will redeliver before permanently dropping the record.
+
 ### Reporting
 
-`ConsumptionReport` maintains an atomic counter per consumer. When the combined total reaches 400, it prints a summary showing how many records each consumer processed.
+`ConsumptionReport` maintains an atomic counter per consumer. When the combined total of non-poison records reaches 399, it prints a summary. Poison delivery attempts are tracked separately and the drop is logged when the attempt count hits the maximum.
 
 ## Running
 
@@ -105,12 +109,33 @@ Reducing the slow sleep to 500 ms let `SlowConsumer` actually complete records d
 
 Both consumers processed from the **same single partition** concurrently. The broker distributed records based on consumer availability — faster consumer, more records. No partition reassignment, no blocked partition, no starvation.
 
+### Attempt 3 — poison message and dead-lettering
+
+One message among the 400 has value `POISON`. Every consumer that receives it sleeps 5 s, intentionally exceeding the broker's 3 s lock. The broker reclaims the record and redelivers it to the next available consumer. After 5 attempts the broker permanently drops it.
+
+Observed sequence for offset 292:
+
+```
+18:07:03  POISON attempt=1  FastConsumer  — sleeps 5s, lock expires at 3s, broker redelivers
+18:07:06  POISON attempt=2  SlowConsumer  — sleeps 5s, lock expires, broker redelivers
+18:07:09  POISON attempt=3  FastConsumer  — same
+18:07:12  POISON attempt=4  SlowConsumer  — same
+18:07:15  POISON attempt=5  FastConsumer  — max delivery attempts reached, broker DROPS
+
+18:07:08  CONSUMPTION REPORT (399 messages)
+            FastConsumer: 389   SlowConsumer: 10
+            POISON: delivered 2 time(s) at report time, dropped after 5 attempts total
+```
+
+The 399 healthy messages completed normally throughout. The poison message bounced between both consumers exactly 5 times before the broker discarded it — no manual DLQ logic needed in consumer code.
+
 ### Conclusion
 
 Kafka Queues deliver true work-queue semantics on top of Kafka:
 
 - Slower consumers don't block faster ones, even on a single partition
 - Records that a consumer holds too long are **reclaimed by the broker and redelivered** to a faster peer — no manual intervention, no rebalance
+- Unprocessable records are **automatically dead-lettered** after a configurable number of delivery attempts, at the broker level
 - The throughput of the group is gated by the fastest available consumer rather than the slowest
 
 This is a meaningful shift in how Kafka can be used for task-processing workloads where processing times are unpredictable.

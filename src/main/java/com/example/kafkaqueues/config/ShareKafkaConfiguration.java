@@ -19,15 +19,13 @@ public class ShareKafkaConfiguration {
   @Bean
   public ShareConsumerFactory<String, String> shareConsumerFactory(
       @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-      @Value("${app.kafka.share-group-id}") String groupId,
-      @Value("${app.kafka.consumer.share-lock-duration-ms}") long shareLockDurationMs) {
+      @Value("${app.kafka.share-group-id}") String groupId) {
     Map<String, Object> props = new HashMap<>();
     props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
-    props.put("group.share.record.lock.duration.ms", shareLockDurationMs);
     return new DefaultShareConsumerFactory<>(props);
   }
 
