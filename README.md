@@ -90,6 +90,8 @@ The logs showed the non-blocking behaviour clearly:
 
 However, the consumption report was less compelling — `SlowConsumer` contributed 0 completed records within the 400-message window because its one in-flight record didn't finish until after the batch was done.
 
+This exposed a second key behaviour: once `group.share.record.lock.duration.ms` elapses, the broker **reclaims the unacknowledged record from `SlowConsumer` and redelivers it to another available consumer** — in this case `FastConsumer`. The slow consumer doesn't just fall behind; the work it failed to finish in time is actively reassigned. In a classic consumer group this scenario (consumer holding a partition and timing out) would trigger a full rebalance and a flood of duplicate processing. Here the broker handles it surgically, at the record level.
+
 ### Attempt 2 — 500 ms sleep (final configuration)
 
 Reducing the slow sleep to 500 ms let `SlowConsumer` actually complete records during the run, producing a clear split:
@@ -105,4 +107,10 @@ Both consumers processed from the **same single partition** concurrently. The br
 
 ### Conclusion
 
-Kafka Queues deliver true work-queue semantics on top of Kafka: slower consumers don't block faster ones, even on a single partition. The throughput of the group is limited by the fastest available consumer rather than the slowest — a meaningful shift in how Kafka can be used for task-processing workloads.
+Kafka Queues deliver true work-queue semantics on top of Kafka:
+
+- Slower consumers don't block faster ones, even on a single partition
+- Records that a consumer holds too long are **reclaimed by the broker and redelivered** to a faster peer — no manual intervention, no rebalance
+- The throughput of the group is gated by the fastest available consumer rather than the slowest
+
+This is a meaningful shift in how Kafka can be used for task-processing workloads where processing times are unpredictable.
