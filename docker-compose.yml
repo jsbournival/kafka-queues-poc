@@ -1,6 +1,6 @@
 services:
   broker:
-    image: apache/kafka:4.0.2
+    image: apache/kafka:4.2.0
     hostname: broker
     container_name: kafka-queues-broker
     ports:
@@ -24,7 +24,7 @@ services:
       KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
 
   enable-share:
-    image: apache/kafka:4.0.2
+    image: apache/kafka:4.2.0
     depends_on:
       broker:
         condition: service_started

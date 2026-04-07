@@ -24,6 +24,9 @@ public class StartupBurstProducer implements ApplicationRunner {
   @Value("${app.kafka.produce-on-startup}")
   private int produceOnStartup;
 
+  @Value("${app.kafka.produce-delay-ms:8000}")
+  private long produceDelayMs;
+
   public StartupBurstProducer(KafkaTemplate<String, String> kafkaTemplate) {
     this.kafkaTemplate = kafkaTemplate;
   }
@@ -32,6 +35,10 @@ public class StartupBurstProducer implements ApplicationRunner {
   public void run(ApplicationArguments args) throws ExecutionException, InterruptedException {
     if (produceOnStartup <= 0) {
       return;
+    }
+    if (produceDelayMs > 0) {
+      log.info("Waiting {} ms before publishing so share consumers can join", produceDelayMs);
+      Thread.sleep(produceDelayMs);
     }
     log.info("Publishing {} records to {}", produceOnStartup, topic);
     for (int i = 0; i < produceOnStartup; i++) {

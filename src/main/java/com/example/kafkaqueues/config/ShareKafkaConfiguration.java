@@ -26,17 +26,14 @@ public class ShareKafkaConfiguration {
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
     props.put("group.share.record.lock.duration.ms", shareLockDurationMs);
     return new DefaultShareConsumerFactory<>(props);
   }
 
   @Bean
   public ShareKafkaListenerContainerFactory<String, String> shareKafkaListenerContainerFactory(
-      ShareConsumerFactory<String, String> shareConsumerFactory,
-      @Value("${app.kafka.consumer.concurrency}") int concurrency) {
-    ShareKafkaListenerContainerFactory<String, String> factory =
-        new ShareKafkaListenerContainerFactory<>(shareConsumerFactory);
-    factory.setConcurrency(concurrency);
-    return factory;
+      ShareConsumerFactory<String, String> shareConsumerFactory) {
+    return new ShareKafkaListenerContainerFactory<>(shareConsumerFactory);
   }
 }

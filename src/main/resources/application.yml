@@ -12,9 +12,8 @@ app:
     topic: poc-queue-topic
     share-group-id: poc-share-group
     produce-on-startup: 400
+    produce-delay-ms: 8000
     consumer:
-      concurrency: 4
-      slow-probability: 0.01
-      slow-sleep-ms: 45000
+      slow-sleep-ms: 500
       fast-sleep-ms: 0
       share-lock-duration-ms: 120000
